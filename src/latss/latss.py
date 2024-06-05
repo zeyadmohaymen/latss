@@ -7,14 +7,14 @@ from latss.preprocessing.raw_preprocessing import FilterRaw, RemoveArtifacts, Ep
 from latss.preprocessing.epochs_preprocessing import Resampler, IntraEpochSegmentation, EpochsDecoder
 from latss.label_alignment.la import LabelAlignment
 from latss.tsmapping.tsm import TangentSpaceMapping
-from latss.utils.utils import validate_raw, validate_epochs
+from latss.utils.utils import validate_raw, validate_epochs, validate_dict
 
 class LATSS:
     """
     Label Alignment - Tangent Space (Mapping) - Support Vector Machine classifier, LATSS for short.
 
     Parameters:
-    - source_data (dict): Dictionary containing the source data and events.
+    - source_data (mne.Epochs | dict): Source data to be used for label alignment.
     - sfreq (int): Sampling frequency of the data (default: 160).
     - epoch_length (int): Length of each epoch in seconds (default: 2).
     - window_size (int): Size of the sliding window in seconds (default: 1).
@@ -27,20 +27,18 @@ class LATSS:
     - predict(raw): Predicts the labels for the provided raw data.
 
     Private Methods:
-    - _validate(raw): Validates the raw data.
     - _preprocess(raw): Preprocesses the raw data.
-    - _preprocess_raw(raw): Preprocesses the raw data without label alignment.
+    - _preprocess_raw(raw): Initial preprocessing of the raw data.
+    - _handle_input(source): Handles the input source data and validates it.
     """
 
-    def __init__(self, source_epochs: mne.Epochs, sfreq=160, epoch_length=2, window_size=1, window_overlap=0.2, svm_C=100):
-        validate_epochs(source_epochs, sfreq, epoch_length, window_size)
-
-        self._source_data = source_epochs.get_data(copy=False)
-        self._source_events = source_epochs.events[:, -1]
+    def __init__(self, source_data: mne.Epochs | dict, sfreq=160, epoch_length=2, window_size=1, window_overlap=0.2, svm_C=100):
         self._sfreq = sfreq
         self._epoch_length = epoch_length
         self._window_size = window_size
         self._window_overlap = window_overlap
+
+        self._source_data, self._source_events = self._handle_input(source_data)
 
         self._clf = Pipeline([
             ('tsm', TangentSpaceMapping()),
@@ -152,3 +150,31 @@ class LATSS:
         ])
 
         return pipe.fit_transform(raw)
+    
+    def _handle_input(self, source):
+        """
+        Handles the input source data and validates it.
+
+        Parameters:
+        - source: Source data to be validated.
+
+        Returns:
+        - tuple: Tuple containing the source data and events.
+
+        Raises:
+        - ValueError: If the source data type is invalid.
+        """
+        data = None
+        events = None
+        if isinstance(source, mne.Epochs):
+            validate_epochs(source, self._sfreq, self._epoch_length, self._window_size)
+            data = source.get_data(copy=False)
+            events = source.events[:, -1]
+        elif isinstance(source, dict):
+            validate_dict(source, self._sfreq, self._epoch_length, self._window_size)
+            data = source['data']
+            events = source['events']
+        else:
+            raise ValueError("Invalid source data type: Expected mne.Epochs or dict")
+        
+        return data, events

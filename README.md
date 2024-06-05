@@ -36,7 +36,9 @@ new_data = ...
 prediction = model.predict(new_data)
 ```
 
-Source data must be an mne.Epochs object that conforms to model parameters.
+  
+Source data must either be an mne.Epochs object or a dictionary of {data: np.ndarray, labels: np.ndarray} pairs.
+Both of input options must match model requirements.    
 To load source datasets, you can either:
 
 1. Use the `load_data()` function to download "-epo.fif" files by passing
