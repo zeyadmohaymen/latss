@@ -1,0 +1,4 @@
+pyriemann
+scipy >= 1.10.1
+mne
+mne_icalabel

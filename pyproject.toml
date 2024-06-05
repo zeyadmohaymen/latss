@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "latss"
+dynamic = ["version"]
+dependencies = [
+  "pyriemann",
+  "scipy >= 1.10.1",
+  "mne",
+  "mne_icalabel"
+]
+requires-python = ">=3.8"
+authors = [
+  {name = "Zeyad Ahmed", email = "zeyadmansour2@gmail.com"}
+]
+description = "A subject-independent motor imagery classification model utilizing advanced domain adaptation techniques."
+readme = "README.md"
+license = {text = "MIT License"}
+keywords = ["motor imagery", "EEG", "label alignment"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python"
+]
+
+[project.urls]
+Homepage = "https://pypi.org/project/latss/"
+Repository = "https://github.com/zeyadmohaymen/latss.git"
