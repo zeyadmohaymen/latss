@@ -13,7 +13,7 @@ class FilterRaw(BaseEstimator, TransformerMixin):
     l_freq : float, optional
         The lower frequency of the bandpass filter. Default is 8.0 Hz.
     h_freq : float, optional
-        The higher frequency of the bandpass filter. Default is 35.0 Hz.
+        The higher frequency of the bandpass filter. Default is 30.0 Hz.
 
     Methods:
     transform(raw)
@@ -25,7 +25,7 @@ class FilterRaw(BaseEstimator, TransformerMixin):
         The filtered raw data.
     """
 
-    def __init__(self, l_freq=8.0, h_freq=35.0):
+    def __init__(self, l_freq=8.0, h_freq=30.0):
         self.l_freq = l_freq
         self.h_freq = h_freq
 
@@ -51,7 +51,7 @@ class RemoveArtifacts(BaseEstimator, TransformerMixin):
     new_raw : mne.io.Raw
         The raw data with artifacts removed.
     """
-    def __init__(self, n_components=15):
+    def __init__(self, n_components=5):
         self.n_components = n_components
 
 
