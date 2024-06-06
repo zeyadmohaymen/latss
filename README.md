@@ -36,37 +36,15 @@ new_data = ...
 prediction = model.predict(new_data)
 ```
 
-  
-Source data must either be an mne.Epochs object or a dictionary of {data: np.ndarray, labels: np.ndarray} pairs.
-Both of input options must match model requirements.    
-To load source datasets, you can either:
-
-1. Use the `load_data()` function to download "-epo.fif" files by passing
-a dictionary of {filename-epo.fif: url} pairs. 
-
+<br />
+Source data can be any [mne.Epochs](https://mne.tools/stable/generated/mne.Epochs.html) object or a dictionary with the following structure:
 ```python
-from latss import load_data
-
-data = {
-    'filename-epo.fif': 'url',
-    'filename-2-epo.fif': 'url'
+{
+    'data': np.array,  # shape: (n_trials, n_channels, n_samples)
+    'labels': np.array,  # shape: (n_events, 3)
 }
-
-source_data = load_data(data)
 ```
 
-2. Load your own "-epo.fif" files using the `unpack_fifs()` function.
-
-```python
-from latss import unpack_fifs
-
-fnames = ['path/to/filename-epo.fif',
-          'path/to/filename-2-epo.fif']
-
-source_data = unpack_fifs(fnames)
-```
-
-3. Or you can optionally use any mne.Epochs object as your source dataset as desired.
 
 ## License
 
