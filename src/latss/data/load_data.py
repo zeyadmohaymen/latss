@@ -4,7 +4,7 @@ from os import path as op
 from pathlib import Path
 import urllib.request
 from mne import concatenate_epochs
-from mne.io import read_epochs
+from mne import read_epochs
 
 
 def _download_file(url, dest_path):

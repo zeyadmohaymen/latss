@@ -3,7 +3,7 @@ import numpy as np
 
 def validate_raw(raw: mne.io.Raw, sfreq, epoch_length, window_size):
     """
-    Validates the raw data matches the model requirements.
+    Validates that raw data matches the model requirements.
 
     Parameters:
     - raw: Raw data to be validated.
@@ -63,8 +63,8 @@ def validate_dict(data_dict: dict, sfreq, length, window_size):
     if data.ndim != 3:
         raise ValueError("Invalid data shape: Expected 3D array (n_epochs, n_channels, n_samples)")
     
-    if data.shape != events.shape:
-        raise ValueError("Data and events shape mismatch")
+    if data.shape[0] != events.shape[0]:
+        raise ValueError(f"Data and events shape mismatch. Data: {data.shape[0]}, Events: {events.shape[0]}")
     
     exp_length = sfreq * length if window_size is None else sfreq * window_size
     if data.shape[-1] != exp_length:

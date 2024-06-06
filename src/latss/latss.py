@@ -60,7 +60,7 @@ class LATSS:
             'window_overlap': self._window_overlap
         }
     
-    def calibrate(self, raw: mne.io.Raw):
+    def calibrate(self, raw: mne.io.Raw, event_id: dict = {'rest': 0, 'feet': 1}):
         """
         Calibrates the classifier using the provided raw data.
         - Raw data is preprocessed
@@ -71,12 +71,13 @@ class LATSS:
 
         Parameters:
         - raw: Raw data to be used for calibration.
+        - event_id: Dictionary containing the annotations and their desired corresponding event IDs. {annotation: event_id (int)}
 
         Returns:
         - float: Accuracy score of the classifier.
         """
         # Preprocess the raw data
-        calib_data, calib_labels = self._preprocess(raw)
+        calib_data, calib_labels = self._preprocess(raw, event_id)
 
         # Split the data into calibration and test sets
         calib_data, test_data, calib_labels, test_labels = train_test_split(calib_data, calib_labels, test_size=0.2, random_state=42)
@@ -103,14 +104,14 @@ class LATSS:
         Raises:
         - ValueError: If the epoch length of the raw data is invalid.
         """
-        validate_raw(preprocessed_raw, self._sfreq, self._epoch_length, self._window_size)
+        validate_raw(raw, self._sfreq, self._epoch_length, self._window_size)
 
         preprocessed_raw = self._preprocess_raw(raw)
         preprocessed_data = preprocessed_raw.get_data()
 
         return self._clf.predict(preprocessed_data) #! Should return ONE label
 
-    def _preprocess(self, raw):
+    def _preprocess(self, raw, event_id):
         """
         Preprocesses the raw data.
 
@@ -123,9 +124,9 @@ class LATSS:
         initial_preprocessing = self._preprocess_raw(raw)
 
         pipe = Pipeline([
-            ('epochify', Epochify(length=self._epoch_length)),
-            ('resample', Resampler(self._sfreq)) if raw.info['sfreq'] != self._sfreq else None, #! Will incoming Raw object have sfreq attribute?
-            ('segmenter', IntraEpochSegmentation(self._window_size, self._window_overlap)) if self._window_size and self._window_overlap else None,
+            ('epochify', Epochify(event_id=event_id, length=self._epoch_length)),
+            ('resample', Resampler(self._sfreq) if raw.info['sfreq'] != self._sfreq else 'passthrough'), #! Will incoming Raw object have sfreq attribute?
+            ('segmenter', IntraEpochSegmentation(self._window_size, self._window_overlap) if self._window_size and self._window_overlap else 'passthrough'),
             ('decoder', EpochsDecoder()),            
         ])
 
@@ -173,7 +174,7 @@ class LATSS:
         elif isinstance(source, dict):
             validate_dict(source, self._sfreq, self._epoch_length, self._window_size)
             data = source['data']
-            events = source['events']
+            events = source['events'][:, -1]
         else:
             raise ValueError("Invalid source data type: Expected mne.Epochs or dict")
         

@@ -1,5 +1,4 @@
-import mne
-from mne import pick_types, Epochs
+from mne import pick_types, Epochs, events_from_annotations
 from mne.io import Raw
 from mne.preprocessing import ICA
 from mne_icalabel import label_components
@@ -77,7 +76,9 @@ class RemoveArtifacts(BaseEstimator, TransformerMixin):
         raw = raw.copy().set_eeg_reference('average')
 
         # Filter from 1-100 Hz
-        raw = raw.filter(1, 100, fir_design='firwin')
+        sfreq = raw.info['sfreq']
+        hfreq = 100 if sfreq > 200 else None
+        raw = raw.filter(1, hfreq, fir_design='firwin')
 
         # Create ICA object
         ica = ICA(n_components=self.n_components, random_state=97, max_iter="auto", method="infomax", fit_params=dict(extended=True)) 
@@ -152,8 +153,9 @@ class Epochify(BaseEstimator, TransformerMixin):
         The segmented epochs.
     """
 
-    def __init__(self, event_ids=[0,1], channels=None, tmin=0.5, length=3, baseline=(-0.5, 0)):
-        self.event_ids = event_ids
+    def __init__(self, extract_events=True, event_id={'0': 0, '1': 1}, channels=None, tmin=0.5, length=3, baseline=(-0.5, 0)):
+        self.extract_events = extract_events
+        self.event_id = event_id
         self.channels = channels
         self.tmin = tmin
         self.length = length
@@ -189,10 +191,14 @@ class Epochify(BaseEstimator, TransformerMixin):
         # Select specified channels
         selected_channels = self._select_channels(raw)
 
+        events = None
+        if self.extract_events:
+            events, _ = events_from_annotations(raw, event_id=self.event_id)
+
         # Segment raw data into epochs while applying baseline correction
         tmin = self.tmin if self.tmin < self.baseline[0] else self.baseline[0]
         tmax = self.tmin + self.length
-        epochs = Epochs(raw, event_id=self.event_ids, tmin=tmin, tmax=tmax, picks=selected_channels, baseline=self.baseline, preload=True)
+        epochs = Epochs(raw, events=events, event_id=self.event_id, tmin=tmin, tmax=tmax, picks=selected_channels, baseline=self.baseline, preload=True)
 
         # Crop epochs to specified time window
         epochs = self._crop_to_tmin(epochs)

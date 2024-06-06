@@ -124,6 +124,8 @@ venv.bak/
 # Testing
 tests/
 
+.vscode/
+
 # Spyder project settings
 .spyderproject
 .spyproject

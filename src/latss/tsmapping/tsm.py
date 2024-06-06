@@ -1,5 +1,6 @@
 from pyriemann.tangentspace import TangentSpace
 from pyriemann.estimation import Covariances
+import numpy as np
 
 class TangentSpaceMapping:
 
@@ -16,7 +17,8 @@ class TangentSpaceMapping:
         Returns:
         array-like: The tangent space mapping of the input epochs data.
         """
-        
+        if epochs_data.ndim == 2:
+            epochs_data = epochs_data[np.newaxis, ...]
         # Compute SPD covariance matrices
         covs = Covariances(estimator='oas').fit_transform(epochs_data)
 
