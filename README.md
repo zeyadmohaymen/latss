@@ -39,8 +39,8 @@ acc = model.calibrate(calibration_data, event_id=event_id)
 new_data = ...
 prediction = model.predict(new_data)
 ```
-
-<br />
+  
+  
 Source data can be any [mne.Epochs](https://mne.tools/stable/generated/mne.Epochs.html) object or a dictionary with the following structure:
 ```python
 {
