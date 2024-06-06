@@ -124,6 +124,9 @@ venv.bak/
 # Testing
 tests/
 
+# Version control
+_version.py
+
 .vscode/
 
 # Spyder project settings

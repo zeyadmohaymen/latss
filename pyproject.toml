@@ -26,6 +26,9 @@ classifiers = [
   "Programming Language :: Python"
 ]
 
+[tool.setuptools_scm]
+version_file = "_version.py"
+
 [project.urls]
 Homepage = "https://pypi.org/project/latss/"
 Repository = "https://github.com/zeyadmohaymen/latss.git"
