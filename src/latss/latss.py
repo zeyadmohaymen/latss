@@ -3,12 +3,12 @@ from sklearn.svm import SVC
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 from mne import Epochs, EpochsArray
-from mne.io import Raw
+from mne.io import Raw, BaseRaw, RawArray
 from latss.preprocessing.raw_preprocessing import FilterRaw, RemoveArtifacts, Epochify
 from latss.preprocessing.epochs_preprocessing import Resampler, IntraEpochSegmentation
 from latss.label_alignment.la import LabelAlignment
 from latss.tsmapping.tsm import TangentSpaceMapping
-from latss.utils.utils import validate_raw, validate_epochs, validate_dict
+from latss.utils.utils import validate_raw, validate_epochs, validate_dict, validate_input_type
 
 class LATSS:
     """
@@ -27,10 +27,28 @@ class LATSS:
     - calibrate(raw): Calibrates the classifier using the provided raw data.
     - predict(raw): Predicts the labels for the provided raw data.
 
-    Private Methods:
-    - _preprocess(raw): Preprocesses the raw data.
-    - _preprocess_raw(raw): Initial preprocessing of the raw data.
-    - _handle_input(source): Handles the input source data and validates it.
+    Example:
+    ```python
+    from latss import LATSS
+
+    # Load source data
+    source_data = ...
+
+    # Initialize the model
+    model = LATSS(source_data=source_data)
+
+    # Calibrate and train the model
+    calibration_data = ...
+    event_id = {
+                'left_hand': 1,
+                'right_hand': 2,
+                }
+    acc = model.calibrate(calibration_data, event_id=event_id)
+
+    # Predict on new data
+    new_data = ...
+    prediction = model.predict(new_data)
+    ```
     """
 
     def __init__(self, source_data: Epochs | dict, sfreq=160, epoch_length=2, window_size=1, window_overlap=0.2, svm_C=100):
@@ -71,12 +89,14 @@ class LATSS:
         - Accuracy score of the classifier is returned
 
         Parameters:
-        - raw: Raw data to be used for calibration.
+        - raw: MNE Raw object to be used for calibration.
         - event_id: Dictionary containing the annotations and their desired corresponding event IDs. {annotation: event_id (int)}
 
         Returns:
         - float: Accuracy score of the classifier.
         """
+        validate_input_type(raw, [Raw, BaseRaw, RawArray])
+
         # Preprocess the raw data
         calib_data, calib_labels = self._preprocess(raw, event_id = event_id)
 
@@ -94,15 +114,16 @@ class LATSS:
     
     def predict(self, raw: Raw):
         """
-        Predicts the labels for the provided raw data. Data must conform to model's parameters.
+        Predicts the labels for the provided raw data
 
         Parameters:
-        - raw: Raw data for which labels are to be predicted.
+        - raw: MNE Raw object for which labels are to be predicted.
 
         Returns:
         - array: Predicted labels for the raw data.
         """
-
+        validate_input_type(raw, [Raw, BaseRaw, RawArray])
+        
         preprocessed_data, _ = self._preprocess(raw, epochify=False)
 
         return self._clf.predict(preprocessed_data)
