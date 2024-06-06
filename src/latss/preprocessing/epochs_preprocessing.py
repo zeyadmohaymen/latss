@@ -1,8 +1,11 @@
 from sklearn.base import BaseEstimator, TransformerMixin
-from mne import Epochs, EpochsArray
+from mne.io import Raw, BaseRaw
+from mne import Epochs, EpochsArray, events_from_annotations
 import numpy as np
+from latss.utils.utils import validate_input_type
 import logging
 logger = logging.getLogger('epochs-preprocessing')
+
     
 class Cropper(BaseEstimator, TransformerMixin):
     """
@@ -40,6 +43,30 @@ class Cropper(BaseEstimator, TransformerMixin):
         tmax = self.tmin + self.length
         logger.info(f"Cropped epochs from {self.tmin}s to {tmax}s")
         return epochs.copy().crop(self.tmin, self.tmax)
+    
+class EventsEqualizer(BaseEstimator, TransformerMixin):
+    """
+    A transformer class to equalize event counts in epochs data.
+
+    Parameters:
+    -----------
+    None
+
+    Returns:
+    --------
+    epochs : Epochs
+        The input epochs data with equalized event counts.
+    """
+    def __init__(self, method='truncate'):
+        self.method = method
+    
+    def fit(self, X, y=None):
+        return self
+    
+    def transform(self, epochs: Epochs):
+        eq_epochs = epochs.copy().equalize_event_counts(method=self.method)[0]
+        print(eq_epochs)
+        return eq_epochs
     
 class Resampler(BaseEstimator, TransformerMixin):
     """
@@ -104,40 +131,54 @@ class IntraEpochSegmentation(BaseEstimator, TransformerMixin):
     def fit(self, X, y=None):
         return self
     
-    def transform(self, epochs: Epochs):
+    def transform(self, epochs: Epochs | Raw):
         """
         Transform the epochs with intra-epoch segmentation using a sliding window.
 
         Parameters:
         -----------
-        epochs : mne.Epochs
-            The input epochs object.
+        epochs : mne.Epochs | mne.io.Raw
+            The epochs or raw object to be segmented.
 
         Returns:
         --------
-        new_epochs : mne.Epochs
-            The segmented epochs object.
+        new_data : ndarray
+            The segmented data.
+        new_events : ndarray
+            The segmented events.
 
         """
+        # get input type 
+        data_type = validate_input_type(epochs, [Epochs, Raw, EpochsArray, BaseRaw])
+
         # Copy the epochs object to avoid modifying the original data
         epochs = epochs.copy()
 
-        # Check if the window size is greater than the epoch length
-        epoch_length = epochs.tmax - epochs.tmin
-        if self.window_size >= epoch_length:
-            return epochs
+        data = None
+        events = None
+        if data_type == 'Epochs':
+            data = epochs.get_data(copy=False)
+            events = epochs.events
+        else:
+            data = epochs.get_data()
+            data = data[np.newaxis, ...]
+            events, _ = events_from_annotations(epochs)
         
         # Get the sampling frequency of the epochs data
         sfreq = epochs.info['sfreq']
+        
+        # Check if the window size is greater than the epoch length
+        epoch_length = epochs.tmax - epochs.tmin if data_type == 'Epochs' else epochs.n_times / sfreq
+        if self.window_size >= epoch_length:
+            return data, events
         
         # Calculate the number of samples in each window
         n_samples = int(self.window_size * sfreq)
         
         # Calculate the number of samples to step between windows
         step_samples = int(n_samples * (1 - self.overlap))
-        
-        # Get the original data from the epochs object
-        data = epochs.get_data(copy=False)
+    
+        # Get the shape of the data
         n_epochs, n_channels, n_times = data.shape
         
         # Calculate the number of windows per epoch
@@ -157,7 +198,10 @@ class IntraEpochSegmentation(BaseEstimator, TransformerMixin):
                 
                 # Append the data and events of the window to the respective lists
                 new_data.append(data[epoch_idx, :, start:stop])
-                new_events.append([epochs.events[epoch_idx, 0] + start, 0, epochs.events[epoch_idx, 2]])
+
+                # Check if events is not empty
+                if len(events) > 0:
+                    new_events.append([events[epoch_idx, 0] + start, 0, events[epoch_idx, 2]])
         
         # Convert the lists to numpy arrays
         new_data = np.array(new_data)

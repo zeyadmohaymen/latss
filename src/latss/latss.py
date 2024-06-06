@@ -2,9 +2,10 @@ from sklearn.pipeline import Pipeline
 from sklearn.svm import SVC
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
-import mne
+from mne import Epochs, EpochsArray
+from mne.io import Raw
 from latss.preprocessing.raw_preprocessing import FilterRaw, RemoveArtifacts, Epochify
-from latss.preprocessing.epochs_preprocessing import Resampler, IntraEpochSegmentation, EpochsDecoder
+from latss.preprocessing.epochs_preprocessing import Resampler, IntraEpochSegmentation
 from latss.label_alignment.la import LabelAlignment
 from latss.tsmapping.tsm import TangentSpaceMapping
 from latss.utils.utils import validate_raw, validate_epochs, validate_dict
@@ -32,7 +33,7 @@ class LATSS:
     - _handle_input(source): Handles the input source data and validates it.
     """
 
-    def __init__(self, source_data: mne.Epochs | dict, sfreq=160, epoch_length=2, window_size=1, window_overlap=0.2, svm_C=100):
+    def __init__(self, source_data: Epochs | dict, sfreq=160, epoch_length=2, window_size=1, window_overlap=0.2, svm_C=100):
         self._sfreq = sfreq
         self._epoch_length = epoch_length
         self._window_size = window_size
@@ -60,7 +61,7 @@ class LATSS:
             'window_overlap': self._window_overlap
         }
     
-    def calibrate(self, raw: mne.io.Raw, event_id: dict = {'rest': 0, 'feet': 1}):
+    def calibrate(self, raw: Raw, event_id: dict = {'rest': 0, 'feet': 1}):
         """
         Calibrates the classifier using the provided raw data.
         - Raw data is preprocessed
@@ -77,7 +78,7 @@ class LATSS:
         - float: Accuracy score of the classifier.
         """
         # Preprocess the raw data
-        calib_data, calib_labels = self._preprocess(raw, event_id)
+        calib_data, calib_labels = self._preprocess(raw, event_id = event_id)
 
         # Split the data into calibration and test sets
         calib_data, test_data, calib_labels, test_labels = train_test_split(calib_data, calib_labels, test_size=0.2, random_state=42)
@@ -91,7 +92,7 @@ class LATSS:
 
         return self._clf.score(test_data, test_labels)
     
-    def predict(self, raw: mne.io.Raw):
+    def predict(self, raw: Raw):
         """
         Predicts the labels for the provided raw data. Data must conform to model's parameters.
 
@@ -100,18 +101,13 @@ class LATSS:
 
         Returns:
         - array: Predicted labels for the raw data.
-
-        Raises:
-        - ValueError: If the epoch length of the raw data is invalid.
         """
-        validate_raw(raw, self._sfreq, self._epoch_length, self._window_size)
 
-        preprocessed_raw = self._preprocess_raw(raw)
-        preprocessed_data = preprocessed_raw.get_data()
+        preprocessed_data, _ = self._preprocess(raw, epochify=False)
 
-        return self._clf.predict(preprocessed_data) #! Should return ONE label
+        return self._clf.predict(preprocessed_data)
 
-    def _preprocess(self, raw, event_id):
+    def _preprocess(self, raw, epochify=True, event_id=None):
         """
         Preprocesses the raw data.
 
@@ -121,36 +117,20 @@ class LATSS:
         Returns:
         - tuple: Tuple containing the preprocessed epoch data and labels.
         """
-        initial_preprocessing = self._preprocess_raw(raw)
 
-        pipe = Pipeline([
-            ('epochify', Epochify(event_id=event_id, length=self._epoch_length)),
-            ('resample', Resampler(self._sfreq) if raw.info['sfreq'] != self._sfreq else 'passthrough'), #! Will incoming Raw object have sfreq attribute?
-            ('segmenter', IntraEpochSegmentation(self._window_size, self._window_overlap) if self._window_size and self._window_overlap else 'passthrough'),
-            ('decoder', EpochsDecoder()),            
-        ])
-
-        epoch_data, event_data = pipe.fit_transform(initial_preprocessing)
-        labels = event_data[:, -1]
-
-        return epoch_data, labels
-    
-    def _preprocess_raw(self, raw):
-        """
-        Initial preprocessing of the raw data. This includes filtering and removing artifacts.
-
-        Parameters:
-        - raw: Raw data to be preprocessed.
-
-        Returns:
-        - Preprocessed raw data.
-        """
         pipe = Pipeline([
             ('remove_artifacts', RemoveArtifacts(n_components=5)),
             ('filter', FilterRaw()),
+            ('epochify', Epochify(event_id=event_id, length=self._epoch_length) if epochify else 'passthrough'),
+            ('resample', Resampler(self._sfreq) if raw.info['sfreq'] != self._sfreq else 'passthrough'), #! Will incoming Raw object have sfreq attribute?
+            ('segmenter', IntraEpochSegmentation(self._window_size, self._window_overlap) if self._window_size and self._window_overlap else 'passthrough'),
         ])
 
-        return pipe.fit_transform(raw)
+        epoch_data, event_data = pipe.fit_transform(raw)
+        labels = event_data[:, -1] if event_data.ndim == 2 else event_data
+
+        return epoch_data, labels
+
     
     def _handle_input(self, source):
         """
@@ -167,7 +147,7 @@ class LATSS:
         """
         data = None
         events = None
-        if isinstance(source, mne.Epochs):
+        if isinstance(source, Epochs) or isinstance(source, EpochsArray):
             validate_epochs(source, self._sfreq, self._epoch_length, self._window_size)
             data = source.get_data(copy=False)
             events = source.events[:, -1]
