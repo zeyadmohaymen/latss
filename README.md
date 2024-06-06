@@ -1,10 +1,10 @@
 # LATSS
 
-A subject-independent motor imagery classification model utilizing advanced domain adaptation techniques.
+A subject-independent motor imagery classification model.
 
 ## Description
 
-LATSS is a subject-independent motor imagery classification model that utilizes advanced domain adaptation techniques to improve the generalization of the model across subjects. The model employs latent alignment to align source domain data to a target domain with the help of some labeled 'calibration' data. Tangent space mapping is then used as a feature extraction technique. The extracted features are then fed into an SVM classifier with an RBF kernel to classify the motor imagery data.
+Label Alignment - Tangent Space Mapping - SVM, or LATSS for short, is a subject-independent motor imagery classification model that utilizes advanced domain adaptation techniques to improve the generalization of the model across subjects.
 
 ## Installation
 
