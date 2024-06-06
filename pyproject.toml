@@ -9,7 +9,8 @@ dependencies = [
   "pyriemann",
   "scipy >= 1.10.1",
   "mne",
-  "mne_icalabel"
+  "mne_icalabel",
+  onnxruntime
 ]
 requires-python = ">=3.8"
 authors = [
