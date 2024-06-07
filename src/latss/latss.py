@@ -9,6 +9,7 @@ from latss.preprocessing.epochs_preprocessing import Resampler, IntraEpochSegmen
 from latss.label_alignment.la import LabelAlignment
 from latss.tsmapping.tsm import TangentSpaceMapping
 from latss.utils.utils import validate_raw, validate_epochs, validate_dict, validate_input_type
+from typing import Union
 
 class LATSS:
     """
@@ -51,7 +52,7 @@ class LATSS:
     ```
     """
 
-    def __init__(self, source_data: Epochs | dict, sfreq=160, epoch_length=2, window_size=1, window_overlap=0.2, svm_C=100):
+    def __init__(self, source_data: Union[Epochs, dict], sfreq=160, epoch_length=2, window_size=1, window_overlap=0.2, svm_C=100):
         self._sfreq = sfreq
         self._epoch_length = epoch_length
         self._window_size = window_size

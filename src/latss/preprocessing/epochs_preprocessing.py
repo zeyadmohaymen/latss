@@ -3,6 +3,7 @@ from mne.io import Raw, BaseRaw
 from mne import Epochs, EpochsArray, events_from_annotations
 import numpy as np
 from latss.utils.utils import validate_input_type
+from typing import Union
 import logging
 logger = logging.getLogger('epochs-preprocessing')
 
@@ -131,7 +132,7 @@ class IntraEpochSegmentation(BaseEstimator, TransformerMixin):
     def fit(self, X, y=None):
         return self
     
-    def transform(self, epochs: Epochs | Raw):
+    def transform(self, epochs: Union[Epochs, dict]):
         """
         Transform the epochs with intra-epoch segmentation using a sliding window.
 
