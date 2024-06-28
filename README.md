@@ -32,7 +32,7 @@ event_id = {
             'left_hand': 1,
             'right_hand': 2,
             }
-acc = model.calibrate(calibration_data, event_id=event_id)
+acc = model.fit(calibration_data, event_id=event_id)
 
 # Predict on new data
 # Note: new_data must be a mne.io.Raw object as well

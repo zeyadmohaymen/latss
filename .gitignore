@@ -124,6 +124,10 @@ venv.bak/
 # Testing
 tests/
 
+# Testing features
+data_capture.py
+dim_reducer.py
+
 # Version control
 _version.py
 

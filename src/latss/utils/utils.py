@@ -104,3 +104,47 @@ def validate_dict(data_dict: dict, sfreq, length, window_size):
     exp_length = sfreq * length if window_size is None else sfreq * window_size
     if data.shape[-1] != exp_length:
         raise ValueError(f"Invalid epoch length: Expected {exp_length}, got {data.shape[-1]}")
+
+def convert_dict_to_raw(data_dict: dict, annot_desc={0: '0', 1: '1'}, sfreq=160, ch_names=["C3", "C4", "P3", "P4", "T3", "T4", "T5", "T6"]):
+    """
+    Converts a data dictionary to a MNE Raw object.
+
+    Parameters:
+    - data_dict: Data dictionary to be converted.
+    - sfreq: Sampling frequency of the data.
+    - ch_names: Channel names of the data.
+
+    Returns:
+    - mne.io.Raw: Raw data object.
+    """
+    data = data_dict["data"]
+    data_2d = data.reshape(data.shape[1], -1)
+    events = data_dict["events"][:, -1]
+
+    info = mne.create_info(ch_names, sfreq, ch_types='eeg')
+    raw = mne.io.RawArray(data_2d, info)
+    
+    raw.set_eeg_reference()
+    raw.set_montage("standard_1020")
+
+    duration = data.shape[-1] / sfreq
+    onset = np.arange(0, data_2d.shape[-1] / sfreq, duration)
+    description = [annot_desc[e] for e in events]
+
+    # Add Annotations
+    annots = mne.Annotations(onset=onset, duration=duration, description=description)
+    raw.set_annotations(annots)
+
+    return raw
+
+def is_fitted(estimator):
+    """
+    Checks if the estimator has been fitted.
+
+    Parameters:
+    - estimator: Estimator to be checked.
+
+    Returns:
+    - bool: True if the estimator has been fitted.
+    """
+    return hasattr(estimator, 'classes_')

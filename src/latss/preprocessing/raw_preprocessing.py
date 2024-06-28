@@ -168,7 +168,7 @@ class Epochify(BaseEstimator, TransformerMixin):
         return None
     
     def _crop_to_tmin(self, epochs: Epochs):
-        return epochs.crop(tmin=self.tmin)
+        return epochs.crop(tmin=self.tmin, tmax=self.tmin + self.length, include_tmax=False)
 
     def fit(self, X, y=None):
         return self
@@ -196,7 +196,10 @@ class Epochify(BaseEstimator, TransformerMixin):
             events, _ = events_from_annotations(raw, event_id=self.event_id)
 
         # Segment raw data into epochs while applying baseline correction
-        tmin = self.tmin if self.tmin < self.baseline[0] else self.baseline[0]
+        if self.baseline:
+            tmin = self.tmin if self.tmin < self.baseline[0] else self.baseline[0]
+        else:
+            tmin = self.tmin
         tmax = self.tmin + self.length
         epochs = Epochs(raw, events=events, event_id=self.event_id, tmin=tmin, tmax=tmax, picks=selected_channels, baseline=self.baseline, preload=True)
 
